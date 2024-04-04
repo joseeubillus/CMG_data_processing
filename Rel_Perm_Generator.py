@@ -39,14 +39,14 @@ def rel_perm_batch(path_to_save,init_crit_co2,final_crit_co2,
             Figure with the relative permeability and capillary pressure curves
     
     '''
-    colors = ['b','r','g','c','m','y','k']
+    colors = ['C0','C1','C2','C3','C4','C5','C6']
     labels = ['Sc = 0.1','Sc = 0.2','Sc = 0.3','Sc = 0.4','Sc = 0.5','Sc = 0.6','Sc = 0.7']
 
     crit_c02_list = np.arange(init_crit_co2,final_crit_co2 + 0.1,0.1)
     wat_sat = np.arange(swi,1.01,0.01)
     sg= 1-wat_sat[::-1]
         
-    fig, ((ax0,ax1),(ax2,ax3)) = plt.subplots(2,2,figsize=(20,20),dpi=300)
+    fig, ((ax0,ax1),(ax2,ax3)) = plt.subplots(2,2,figsize=(10,10),dpi=300)
 
     for snc in crit_c02_list:
 
@@ -65,17 +65,17 @@ def rel_perm_batch(path_to_save,init_crit_co2,final_crit_co2,
             SwPb = wat_sat[idx+1:]
         # Modified Brooks Corey model
 
-            Pc_facies1a = pce_1 * ((SwP - swi)/(1-swi))**(-0.5) # Capillary pressure (psi)
-            Pc_facies1b = ((pce_1/snc)*((1-snc-swi)/(1-swi))**(-0.5))*(1-SwPb) # Capillar pressure for the saturations lower than Snc
+            Pc_facies1a = pce_1 * ((SwP - swi)/(1-swi))**(-1) # Capillary pressure (psi)
+            Pc_facies1b = ((pce_1/snc)*((1-snc-swi)/(1-swi))**(-1))*(1-SwPb) # Capillar pressure for the saturations lower than Snc
             pc1 = np.concatenate((Pc_facies1a,Pc_facies1b))
 
-            Pc_facies2a = pce_2 * ((SwP - swi)/(1-swi))**(-0.5) # Capillary pressure (psi)
-            Pc_facies2b = ((pce_2/snc)*((1-snc-swi)/(1-swi))**(-0.5))*(1-SwPb) # Capillar pressure for the saturations lower than Snc
+            Pc_facies2a = pce_2 * ((SwP - swi)/(1-swi))**(-1) # Capillary pressure (psi)
+            Pc_facies2b = ((pce_2/snc)*((1-snc-swi)/(1-swi))**(-1))*(1-SwPb) # Capillar pressure for the saturations lower than Snc
 
             pc2 = np.concatenate((Pc_facies2a,Pc_facies2b))
         elif cap_p_model == 'BC':
-            pc1 = pce_1 *((wat_sat - swi)/(1-swi))**(-0.5) # Sand Capillary pressure (psi)
-            pc2 = pce_2 *((wat_sat - swi)/(1-swi))**(-0.5) # Shale Capillary pressure (psi)
+            pc1 = pce_1 *((wat_sat - swi)/(1-swi))**(-1) # Sand Capillary pressure (psi)
+            pc2 = pce_2 *((wat_sat - swi)/(1-swi))**(-1) # Shale Capillary pressure (psi)
 
         elif cap_p_model == 'VG':
             pc1 = pce_1*(((wat_sat - swi)/(1-swi))**(-1/0.464)-1)**(1/1.864) # Sand Capillary pressure (psi)
@@ -114,18 +114,21 @@ def rel_perm_batch(path_to_save,init_crit_co2,final_crit_co2,
         if (cap_p_model == 'MBC' or cap_p_model == 'BC'): # Pini and Benson, 2017
             swi_hat = swi + 0.01
             swih = (swi_hat-swi)/(1-swi-sgrmax)
-            pci = pce_1*(1-swih**0.5)**-1
-            pcI = pci*((swfh**-0.5)-1)
-            pci2 = pce_2*(1-swih**0.5)**-1
-            pcI2 = pci2*((swfh**-0.5)-1)
+            pci = pce_1*(1-swih**1)**-1
+            pcI = pci*((swfh**-1)-1)
+            pci2 = pce_2*(1-swih**1)**-1
+            pcI2 = pci2*((swfh**-1)-1)
+            ax1.set_ylim(0,20)
     
         elif cap_p_model == 'VG':
                 
                 pcI = pce_1*(((swfh**-1/0.464)-1)**(1/1.864)-1)
                 pcI2 = pce_2*(((swfh**-1/0.559)-1)**(1/2.266)-1)
+                ax1.set_ylim(0,50)
 
         jsI = pcI*np.sqrt(kx_s/Phi_s)
         jsI[-1] = J_s[0]
+        
         pcI[-1] = pc1[0]
         pcI = np.flip(np.concatenate((zgh,pcI)))
         jsI = np.flip(np.concatenate((zgh,jsI)))
@@ -136,14 +139,6 @@ def rel_perm_batch(path_to_save,init_crit_co2,final_crit_co2,
         
         wat_sat[0] = swi
 
-        # Save to txt file using numpy
-        zeros = np.zeros(shape = (len(wat_sat),))
-        data1 = np.array([wat_sat,krl,zeros,J_s,jsI])
-        data2 = np.array([wat_sat,krl,zeros,J_sh,jshI])
-        data3 = np.array([sg,krg[::-1],zeros])
-        data3[data3 < 0] = 0
-
-
         ax0.plot(wat_sat,krg,c=colors[crit_c02_list.tolist().index(snc)],label = labels[crit_c02_list.tolist().index(snc)])
         ax0.set_xlabel('Brine saturation')
         ax0.set_ylabel('Relative permeability')
@@ -153,36 +148,63 @@ def rel_perm_batch(path_to_save,init_crit_co2,final_crit_co2,
         ax1.set_xlabel('Brine saturation')
         ax1.set_ylabel('Sand Capillary pressure [psi]')
         ax1.margins(y=0)
-        ax1.legend()
+        ax1.set_xlim(0,1)
         ax1.set_ylim(0,20)
-
+        ax1.legend()
+     
+        
+        if snc == init_crit_co2:
+            fig,ax = plt.subplots(1,2,figsize=(10,5),dpi=200)
+            ax[0].plot(wat_sat,pcI,'k',linestyle='--',label = 'Imbibition')
+            ax[0].plot(wat_sat,pc1,'b',label = 'Drainage')
+            ax[0].set_xlabel('Sw [-]')
+            ax[0].set_ylabel('Capillary pressure [psi]')
+            ax[0].set_xlim(0,1)
+            ax[0].set_ylim(0,20)
+            ax[0].margins(y=0)
+            ax[0].set_title(cap_p_model)
+            ax[0].legend()
+            
+            ax[1].plot(wat_sat,krgI,'k',linestyle='--',label = 'Krg imbibition')
+            ax[1].plot(wat_sat,krg,'r',label = 'Krg drainage')
+            ax[1].plot(wat_sat,krl,'b',label = 'Krw')
+            ax[1].set_xlabel('Sw [-]')
+            ax[1].set_ylabel('Relative permeability [-]')
+            ax[1].margins(y=0)
+            ax[1].legend()
+            plt.tight_layout()
+        
+        # Save to txt file using numpy
+        zeros = np.zeros(shape = (len(wat_sat),))
+        data1 = np.array([wat_sat,krl,zeros,J_s,jsI])
+        data2 = np.array([wat_sat,krl,zeros,J_sh,jshI])
+        data3 = np.array([sg,krg[::-1],zeros])
+        data3[data3 < 0] = 0
         if print_bool == True:
             np.savetxt(path_to_save + '/rel_perm_1_' + str(round(snc,2)) + '.txt',data1.T,fmt=['%.6f','%.6f','%.6f','%.6f','%.6f'])
             np.savetxt(path_to_save + '/rel_perm_2_' + str(round(snc,2)) + '.txt',data2.T,fmt=['%.6f','%.6f','%.6f','%.6f','%.6f'])
             np.savetxt(path_to_save + '/sg_'+ str(snc) + '.txt',data3.T,fmt=['%.6f','%.6f','%.6f'])
         
-    ax2.plot(wat_sat,krgI,'k',linestyle='--',label = 'Imbibition relative permeability')
-    ax2.plot(wat_sat,krg,'b',label = 'Drainage relative permeability')
-    ax2.plot(wat_sat,krl,'b',label = 'Liquid relative permeability')
+    ax2.plot(wat_sat,krgI,'k',linestyle='--',label = 'Krg imbibition')
+    ax2.plot(wat_sat,krg,'r',label = 'Krg drainage')
+    ax2.plot(wat_sat,krl,'b',label = 'Krw')
     ax2.set_xlabel('Brine saturation')
     ax2.set_ylabel('Relative permeability')
     ax2.margins(y=0)
     ax2.legend()
 
-    ax3.plot(wat_sat,pcI,'k',linestyle='--',label = 'Imbibition capillary pressure')
-    ax3.plot(wat_sat,pc1,'b',label = 'Drainage capillary pressure')
+    ax3.plot(wat_sat,pcI,'k',linestyle='--',label = 'Imbibition')
+    ax3.plot(wat_sat,pc1,'b',label = 'Drainage')
     ax3.set_xlabel('Brine saturation')
     ax3.set_ylabel('Capillary pressure [psi]')
     ax3.margins(y=0)
     ax3.legend()
     ax3.set_ylim(0,20)
 
-
     ax0.plot(wat_sat,krl,'pink',linestyle='--',label = 'Liquid relative permeability')
     ax0.legend()
-    plt.tight_layout()
     plt.show()
 
-    return 
+    return
 
         
